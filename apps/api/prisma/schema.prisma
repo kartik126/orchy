@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Agent {
+  id           String    @id @default(cuid())
+  name         String
+  role         String
+  systemPrompt String
+  model        String    @default("gemini-2.0-flash")
+  tools        String[]
+  memoryType   String    @default("buffer")
+  memoryWindow Int       @default(10)
+  guardrails   Json?
+  channelId    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  messages     Message[]
+}
+
+model Workflow {
+  id        String        @id @default(cuid())
+  name      String
+  nodes     Json
+  edges     Json
+  createdAt DateTime      @default(now())
+  runs      WorkflowRun[]
+}
+
+model WorkflowRun {
+  id          String    @id @default(cuid())
+  workflowId  String
+  workflow    Workflow  @relation(fields: [workflowId], references: [id])
+  status      String    @default("pending")
+  triggeredBy String    @default("manual")
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  messages    Message[]
+  logs        Log[]
+}
+
+model Message {
+  id        String      @id @default(cuid())
+  runId     String
+  run       WorkflowRun @relation(fields: [runId], references: [id])
+  fromAgent String
+  toAgent   String
+  content   String
+  role      String
+  agentId   String?
+  agent     Agent?      @relation(fields: [agentId], references: [id])
+  createdAt DateTime    @default(now())
+}
+
+model Log {
+  id         String      @id @default(cuid())
+  runId      String
+  run        WorkflowRun @relation(fields: [runId], references: [id])
+  agentName  String
+  step       String
+  input      String?
+  output     String?
+  tokensUsed Int?
+  latencyMs  Int?
+  createdAt  DateTime    @default(now())
+}
