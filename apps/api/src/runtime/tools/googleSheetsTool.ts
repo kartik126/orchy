@@ -87,3 +87,39 @@ export class AppendInvoiceRowTool extends StructuredTool {
     return `Row appended to Google Sheet: ${input.vendor_name} | ${input.total} ${input.currency}`
   }
 }
+
+export class UpdateGoogleSheetTool extends StructuredTool {
+  name = 'google_sheets_update'
+  description =
+    'Updates specific cells or a row in Google Sheets using A1 notation. Use this to edit existing data (e.g. mark an invoice as paid, correct a value).'
+
+  schema = z.object({
+    range: z
+      .string()
+      .describe(
+        'A1 notation range to update, e.g. "Sheet1!B5" for a single cell or "Sheet1!A2:I2" for a full row.',
+      ),
+    values: z
+      .array(z.array(z.string()))
+      .describe(
+        'A 2D array of values to write. Each inner array is one row. Example: [["paid", "2025-01-15"]] updates two cells in one row.',
+      ),
+  })
+
+  async _call(input: z.infer<typeof this.schema>): Promise<string> {
+    const sheetId = process.env.GOOGLE_SHEET_ID
+    if (!sheetId) throw new Error('GOOGLE_SHEET_ID env var is not set')
+
+    const auth = getAuthClient()
+    const sheets = google.sheets({ version: 'v4', auth })
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: sheetId,
+      range: input.range,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: input.values },
+    })
+
+    return `Updated ${input.range} in Google Sheet.`
+  }
+}
