@@ -6,10 +6,8 @@ import { useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { api } from '@/lib/api'
 import type { Agent } from '@/lib/api'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import {
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
   AlertDialogTitle, AlertDialogDescription, AlertDialogFooter,
@@ -31,41 +29,48 @@ export default function AgentCard({ agent }: { agent: Agent }) {
   }
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <CardTitle className="text-sm truncate">{agent.name}</CardTitle>
-            <CardDescription className="text-xs mt-0.5">{agent.role}</CardDescription>
+    <div className="bg-background rounded-xl border p-5 flex flex-col gap-4 hover:shadow-sm transition-shadow">
+      {/* Top row: model badge + active status */}
+      <div className="flex items-center justify-between">
+        <Badge variant="secondary" className="text-xs font-normal">{agent.model}</Badge>
+        <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+          <span className="size-1.5 rounded-full bg-emerald-500 inline-block" />
+          Active
+        </span>
+      </div>
+
+      {/* Name + role */}
+      <div>
+        <p className="text-base font-semibold leading-snug">{agent.name}</p>
+        {agent.role && (
+          <p className="text-xs font-semibold text-muted-foreground mt-0.5">{agent.role}</p>
+        )}
+      </div>
+
+      {/* Tools — flex-1 pushes actions to the bottom */}
+      <div className="flex-1">
+        {agent.tools.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {agent.tools.map((t) => (
+              <Badge key={t} variant="outline" className="text-xs font-normal">{t}</Badge>
+            ))}
           </div>
-          <Badge variant="success" className="shrink-0 text-xs">Active</Badge>
-        </div>
-      </CardHeader>
+        )}
+      </div>
 
-      <CardContent className="pb-3 flex-1">
-        <p className="text-muted-foreground text-xs line-clamp-2 mb-3">{agent.systemPrompt}</p>
-        <div className="flex flex-wrap gap-1.5">
-          <Badge variant="secondary" className="text-xs font-normal">{agent.model}</Badge>
-          {agent.tools.map((t) => (
-            <Badge key={t} variant="outline" className="text-xs font-normal">{t}</Badge>
-          ))}
-        </div>
-      </CardContent>
-
-      <Separator />
-
-      <CardFooter className="pt-3 gap-2">
-        <Button variant="ghost" size="sm" asChild className="h-7 px-2 text-xs">
+      {/* Actions */}
+      <div className="flex items-center gap-1 pt-1 border-t">
+        <Button variant="ghost" size="sm" asChild className="h-7 px-2 text-xs gap-1.5">
           <Link href={`/agents/${agent.id}`}>
-            <Pencil className="size-3 mr-1" />
+            <Pencil className="size-3" />
             Edit
           </Link>
         </Button>
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive ml-auto">
-              <Trash2 className="size-3 mr-1" />
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1.5 text-muted-foreground hover:text-destructive ml-auto">
+              <Trash2 className="size-3" />
               Delete
             </Button>
           </AlertDialogTrigger>
@@ -88,7 +93,7 @@ export default function AgentCard({ agent }: { agent: Agent }) {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   )
 }

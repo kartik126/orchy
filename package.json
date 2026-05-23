@@ -7,9 +7,12 @@
     "packages/*"
   ],
   "scripts": {
+    "start": "npm run kill-ports && docker-compose up -d && npm run migrate && npm run dev",
+    "kill-ports": "lsof -ti:3001,3000 | xargs kill -9 2>/dev/null; sleep 1; true",
     "dev": "concurrently --names \"api,web\" --prefix-colors \"cyan,magenta\" \"npm run dev --workspace=apps/api\" \"npm run dev --workspace=apps/web\"",
     "dev:api": "npm run dev --workspace=apps/api",
     "dev:web": "npm run dev --workspace=apps/web",
+    "migrate": "npm run migrate --workspace=apps/api",
     "build": "npm run build --workspaces",
     "install:all": "npm install"
   },

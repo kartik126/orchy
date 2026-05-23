@@ -4,10 +4,11 @@ import { useEffect, useRef } from 'react'
 import { useLogStream } from '@/hooks/useLogStream'
 import LogEntry from './LogEntry'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 
 export default function LogStream({ runId }: { runId?: string }) {
-  const { logs, status } = useLogStream(runId)
+  const { logs, status, clearLogs } = useLogStream(runId)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -23,18 +24,28 @@ export default function LogStream({ runId }: { runId?: string }) {
     'secondary'
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-3 bg-background">
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 bg-background shrink-0">
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium">Live Logs</span>
           <Badge variant={statusVariant}>{status}</Badge>
+          {logs.length > 0 && (
+            <span className="text-xs text-muted-foreground">{logs.length} entries</span>
+          )}
         </div>
-        {totalTokens > 0 && (
-          <span className="text-xs text-muted-foreground">{totalTokens.toLocaleString()} tokens</span>
-        )}
+        <div className="flex items-center gap-3">
+          {totalTokens > 0 && (
+            <span className="text-xs text-muted-foreground">{totalTokens.toLocaleString()} tokens</span>
+          )}
+          {logs.length > 0 && (
+            <Button variant="outline" size="sm" onClick={clearLogs} className="h-7 text-xs">
+              Clear
+            </Button>
+          )}
+        </div>
       </div>
       <Separator />
-      <div className="flex-1 overflow-y-auto px-4 py-2">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-2">
         {logs.length === 0 ? (
           <p className="text-muted-foreground text-sm py-8 text-center">Waiting for agent activity...</p>
         ) : (

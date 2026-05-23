@@ -164,18 +164,84 @@ export class UpdateInvoiceTool extends StructuredTool {
     const invoice = await prisma.invoice.findFirst({
       where: { invoiceNumber: { equals: input.invoiceNumber, mode: 'insensitive' } },
     })
-    if (!invoice) {
-      return `Invoice ${input.invoiceNumber} not found in the database.`
+
+    if (invoice) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updateData: any = {}
+      if (input.paymentStatus) updateData.paymentStatus = input.paymentStatus
+      if (input.category) updateData.category = input.category
+      if (input.subcategory) updateData.subcategory = input.subcategory
+
+      await prisma.invoice.update({ where: { id: invoice.id }, data: updateData })
+
+      // Mirror the update to Google Sheets
+      const sheetId = process.env.GOOGLE_SHEET_ID
+      if (sheetId) {
+        try {
+          const auth = getAuthClient()
+          const sheets = google.sheets({ version: 'v4', auth })
+          const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: 'Sheet1!A:L' })
+          const rows = res.data.values ?? []
+          const rowIndex = rows.findIndex((r) => r[1]?.toString().toLowerCase() === input.invoiceNumber.toLowerCase())
+          if (rowIndex !== -1) {
+            const sheetRow = rows[rowIndex]
+            if (input.paymentStatus) sheetRow[11] = input.paymentStatus
+            if (input.category) sheetRow[9] = input.category
+            if (input.subcategory) sheetRow[10] = input.subcategory
+            const gsheetRow = rowIndex + 1
+            await sheets.spreadsheets.values.update({
+              spreadsheetId: sheetId,
+              range: `Sheet1!A${gsheetRow}:L${gsheetRow}`,
+              valueInputOption: 'USER_ENTERED',
+              requestBody: { values: [sheetRow] },
+            })
+          }
+        } catch {
+          // Sheet sync failure is non-fatal — DB is already updated
+        }
+      }
+
+      return `Invoice ${input.invoiceNumber} from ${invoice.vendor} updated: ${Object.entries(updateData).map(([k, v]) => `${k} → ${v}`).join(', ')}.`
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updateData: any = {}
-    if (input.paymentStatus) updateData.paymentStatus = input.paymentStatus
-    if (input.category) updateData.category = input.category
-    if (input.subcategory) updateData.subcategory = input.subcategory
+    // Fallback: try Google Sheets
+    const sheetId = process.env.GOOGLE_SHEET_ID
+    if (!sheetId) return `Invoice ${input.invoiceNumber} not found in database.`
 
-    await prisma.invoice.update({ where: { id: invoice.id }, data: updateData })
+    const auth = getAuthClient()
+    const sheets = google.sheets({ version: 'v4', auth })
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: 'Sheet1!A:L' })
+    const rows = res.data.values ?? []
 
-    return `Invoice ${input.invoiceNumber} from ${invoice.vendor} updated: ${Object.entries(updateData).map(([k, v]) => `${k} → ${v}`).join(', ')}.`
+    // Row layout: [logged_at, invoice_number, date, vendor, desc, subtotal, tax, total, currency, category, subcategory, payment_status]
+    const rowIndex = rows.findIndex((r) => r[1]?.toString().toLowerCase() === input.invoiceNumber.toLowerCase())
+    if (rowIndex === -1) return `Invoice ${input.invoiceNumber} not found in database or Google Sheets.`
+
+    const sheetRow = rows[rowIndex]
+    const updates: string[] = []
+
+    if (input.paymentStatus) {
+      sheetRow[11] = input.paymentStatus
+      updates.push(`paymentStatus → ${input.paymentStatus}`)
+    }
+    if (input.category) {
+      sheetRow[9] = input.category
+      updates.push(`category → ${input.category}`)
+    }
+    if (input.subcategory) {
+      sheetRow[10] = input.subcategory
+      updates.push(`subcategory → ${input.subcategory}`)
+    }
+
+    const gsheetRow = rowIndex + 1 // 1-indexed
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: sheetId,
+      range: `Sheet1!A${gsheetRow}:L${gsheetRow}`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [sheetRow] },
+    })
+
+    const vendor = sheetRow[3] ?? 'unknown vendor'
+    return `Invoice ${input.invoiceNumber} from ${vendor} updated in Google Sheets: ${updates.join(', ')}.`
   }
 }

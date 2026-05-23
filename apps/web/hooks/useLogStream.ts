@@ -118,5 +118,7 @@ export function useLogStream(runId?: string) {
     return () => ws.close()
   }, [runId])
 
-  return { logs, status }
+  const clearLogs = () => setLogs([])
+
+  return { logs, status, clearLogs }
 }

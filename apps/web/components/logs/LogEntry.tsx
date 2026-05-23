@@ -13,9 +13,9 @@ export default function LogEntry({ entry }: { entry: LogEntryType }) {
     'secondary'
 
   return (
-    <div className={`flex gap-3 py-2.5 border-b last:border-0 ${isError ? 'bg-destructive/5' : ''}`}>
+    <div className={`flex gap-3 py-2.5 border-b last:border-0 min-w-0 ${isError ? 'bg-destructive/5' : ''}`}>
       <span className="text-muted-foreground text-xs font-mono w-20 shrink-0 pt-0.5">{time}</span>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 overflow-hidden">
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`text-xs font-semibold ${isError ? 'text-destructive' : 'text-foreground'}`}>
             {agentName}
@@ -28,7 +28,7 @@ export default function LogEntry({ entry }: { entry: LogEntryType }) {
             <Badge variant="outline" className="text-xs font-normal px-1.5 py-0">{tokensUsed} tokens</Badge>
           )}
         </div>
-        <p className={`text-xs mt-1 ${isError ? 'text-destructive whitespace-pre-wrap break-words' : 'text-muted-foreground truncate'}`}>
+        <p className={`text-xs mt-1 break-words ${isError ? 'text-destructive whitespace-pre-wrap' : 'text-muted-foreground'}`}>
           {message}
         </p>
         {error && error !== message && (

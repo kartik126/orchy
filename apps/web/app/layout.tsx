@@ -34,7 +34,7 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${calSans.variable} h-full antialiased`}>
       <body className="h-full flex">
         <Sidebar />
-        <main className="ml-52 flex-1 min-h-screen bg-background">{children}</main>
+        <main className="ml-56 flex-1 min-h-screen bg-muted/30">{children}</main>
       </body>
     </html>
   );
