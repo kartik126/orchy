@@ -139,6 +139,7 @@ export default function WorkflowCanvas({ workflowId, initialNodes, initialEdges,
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          deleteKeyCode={['Delete', 'Backspace']}
           fitView
           fitViewOptions={{ padding: 0.3 }}
         >

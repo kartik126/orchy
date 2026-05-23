@@ -76,12 +76,22 @@ export async function runWorkflow(runId: string, workflowId: string, input: Work
   }
 
   const sortedNodes = topoSort(nodes, edges)
+  const nodeMap = new Map(nodes.map((n) => [n.id, n]))
+  const adjBySource = new Map<string, string[]>()
+  for (const edge of edges) {
+    if (!adjBySource.has(edge.source)) adjBySource.set(edge.source, [])
+    adjBySource.get(edge.source)!.push(edge.target)
+  }
+
   const stepOutputs: { agentName: string; output: string }[] = []
+  const skippedNodeIds = new Set<string>()
   let finalOutput = ''
 
   try {
     for (let i = 0; i < sortedNodes.length; i++) {
       const node = sortedNodes[i]
+
+      if (skippedNodeIds.has(node.id)) continue
       const agentConfig = await prisma.agent.findUnique({ where: { id: node.data.agentId } })
       if (!agentConfig) throw new Error(`Agent ${node.data.agentId} not found`)
 
@@ -115,7 +125,8 @@ export async function runWorkflow(runId: string, workflowId: string, input: Work
         const history = stepOutputs
           .map((s) => `### ${s.agentName}\n${s.output}`)
           .join('\n\n')
-        textContent = `Previous steps:\n\n${history}`
+        const userLine = input.text ? `User message: ${input.text}\n\n` : ''
+        textContent = `${userLine}Previous steps:\n\n${history}`
       }
       if (textContent) {
         parts.push({ type: 'text', text: textContent })
@@ -169,11 +180,13 @@ export async function runWorkflow(runId: string, workflowId: string, input: Work
       stepOutputs.push({ agentName, output })
       finalOutput = output
 
-      // Convention-based halt: if output JSON contains "halt": true, stop the pipeline
+      // Check for control signals in JSON output
       try {
         const jsonMatch = output.match(/\{[\s\S]*\}/)
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0])
+
+          // Halt signal: stop pipeline immediately
           if (parsed.halt === true) {
             const haltReason = parsed.reason ?? `${agentName} halted the pipeline`
             await prisma.log.create({
@@ -183,9 +196,22 @@ export async function runWorkflow(runId: string, workflowId: string, input: Work
             finalOutput = haltReason
             break
           }
+
+          // Route signal: only run the successor whose label matches, skip the rest
+          if (parsed.route) {
+            const routeLabel: string = String(parsed.route).toLowerCase()
+            const successorIds = adjBySource.get(node.id) ?? []
+            for (const succId of successorIds) {
+              const succNode = nodeMap.get(succId)
+              const succLabel = (succNode?.data.label ?? '').toLowerCase()
+              if (succLabel !== routeLabel) {
+                skippedNodeIds.add(succId)
+              }
+            }
+          }
         }
       } catch {
-        // output wasn't JSON — no halt signal, continue
+        // output wasn't JSON — no signals, continue
       }
     }
   } catch (err) {
