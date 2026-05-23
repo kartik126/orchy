@@ -168,6 +168,25 @@ export async function runWorkflow(runId: string, workflowId: string, input: Work
 
       stepOutputs.push({ agentName, output })
       finalOutput = output
+
+      // Convention-based halt: if output JSON contains "halt": true, stop the pipeline
+      try {
+        const jsonMatch = output.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0])
+          if (parsed.halt === true) {
+            const haltReason = parsed.reason ?? `${agentName} halted the pipeline`
+            await prisma.log.create({
+              data: { runId, agentName, step: 'halted', output: haltReason },
+            })
+            logEmitter.emit({ runId, agentName, step: 'halted', message: haltReason })
+            finalOutput = haltReason
+            break
+          }
+        }
+      } catch {
+        // output wasn't JSON — no halt signal, continue
+      }
     }
   } catch (err) {
     await prisma.workflowRun.update({
