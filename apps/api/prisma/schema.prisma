@@ -12,7 +12,7 @@ model Agent {
   name         String
   role         String
   systemPrompt String
-  model        String    @default("gemini-2.0-flash")
+  model        String    @default("gemini-2.5-flash")
   tools        String[]
   memoryType   String    @default("buffer")
   memoryWindow Int       @default(10)
@@ -28,6 +28,7 @@ model Workflow {
   name      String
   nodes     Json
   edges     Json
+  channel   String?
   createdAt DateTime      @default(now())
   runs      WorkflowRun[]
 }

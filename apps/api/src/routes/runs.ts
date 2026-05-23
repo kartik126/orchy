@@ -15,6 +15,18 @@ router.get('/', async (req, res) => {
   }
 })
 
+router.get('/logs/recent', async (req, res) => {
+  try {
+    const logs = await prisma.log.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    })
+    res.json(logs.reverse())
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch logs', code: 'LOGS_ERROR' })
+  }
+})
+
 router.get('/:id', async (req, res) => {
   try {
     const run = await prisma.workflowRun.findUnique({

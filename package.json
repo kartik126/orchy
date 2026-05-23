@@ -7,9 +7,13 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "concurrently --names \"api,web\" --prefix-colors \"cyan,magenta\" \"npm run dev --workspace=apps/api\" \"npm run dev --workspace=apps/web\"",
     "dev:api": "npm run dev --workspace=apps/api",
     "dev:web": "npm run dev --workspace=apps/web",
     "build": "npm run build --workspaces",
     "install:all": "npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }

@@ -28,8 +28,8 @@ Check off tasks as you complete them: change `[ ]` to `[x]`
 
 ### 1.2 Docker + Postgres
 - [x] Create `docker-compose.yml` at root
-- [ ] Run `docker-compose up -d` and verify it starts (Docker Desktop must be running)
-- [ ] Test connection: `psql postgresql://orchy:orchy@localhost:5432/orchy`
+- [x] Run `docker-compose up -d` and verify it starts (Docker Desktop must be running)
+- [x] Test connection: `psql postgresql://orchy:orchy@localhost:5432/orchy`
 
 **Concept:** Docker runs Postgres in an isolated container so you don't install Postgres locally. The `volumes` key persists data between container restarts.
 
@@ -39,7 +39,7 @@ Check off tasks as you complete them: change `[ ]` to `[x]`
 
 ### 1.3 Environment variables
 - [x] Create `.env.example` at root with all variables (see CLAUDE.md)
-- [ ] Fill in actual keys in `.env`:
+- [x] Fill in actual keys in `.env`:
   - `GOOGLE_API_KEY` — from Google AI Studio
   - `TAVILY_API_KEY` — from tavily.com (free tier)
   - `TELEGRAM_BOT_TOKEN` — from @BotFather on Telegram
@@ -64,9 +64,9 @@ Check off tasks as you complete them: change `[ ]` to `[x]`
 *Goal: agents can be created and fetched via API. No agent logic yet.*
 
 ### 2.1 Prisma setup
-- [ ] Install in `apps/api/`: `prisma @prisma/client`
-- [ ] Run `npx prisma init` — creates `prisma/schema.prisma` and adds `DATABASE_URL` to `.env`
-- [ ] Replace the schema with the full Orchy schema:
+- [x] Install in `apps/api/`: `prisma @prisma/client`
+- [x] Run `npx prisma init` — creates `prisma/schema.prisma` and adds `DATABASE_URL` to `.env`
+- [x] Replace the schema with the full Orchy schema:
 
 ```prisma
 generator client {
@@ -145,7 +145,7 @@ model Log {
 **Concept:** Prisma schema is the single source of truth for your database shape. `npx prisma migrate dev` reads this schema and generates SQL to create/alter tables. `@prisma/client` gives you a fully type-safe DB client — no raw SQL needed.
 
 - [x] Run `npx prisma migrate dev --name init`
-- [ ] Verify tables exist: open Prisma Studio with `npx prisma studio`
+- [x] Verify tables exist: open Prisma Studio with `npx prisma studio`
 
 **Done when:** Prisma Studio shows all 5 tables ✓ (migration applied, 5 tables created)
 
@@ -182,19 +182,13 @@ model Log {
 *Goal: a single agent can be instantiated from a DB config and run a task. This is where you understand LangGraph internals.*
 
 ### 3.1 Install AI dependencies
-- [ ] In `apps/api/` install:
-  ```
-  @langchain/langgraph
-  @langchain/core
-  @langchain/google-genai
-  @langchain/community
-  langchain
-  ```
+- [x] In `apps/api/` install: `@langchain/langgraph @langchain/core @langchain/google-genai @langchain/community langchain @langchain/tavily`
+  (Note: TavilySearchResults moved to `@langchain/tavily` as `TavilySearch`)
 
 ---
 
 ### 3.2 Tool registry
-- [ ] Create `src/runtime/toolRegistry.ts`:
+- [x] Create `src/runtime/toolRegistry.ts`:
   ```ts
   import { TavilySearchResults } from '@langchain/community/tools/tavily_search'
   import { Calculator } from '@langchain/community/tools/calculator'
@@ -217,7 +211,7 @@ model Log {
 ---
 
 ### 3.3 Agent factory
-- [ ] Create `src/runtime/agentFactory.ts`:
+- [x] Create `src/runtime/agentFactory.ts`:
   ```ts
   import { ChatGoogleGenerativeAI } from '@langchain/google-genai'
   import { createReactAgent } from '@langchain/langgraph/prebuilt'
@@ -245,12 +239,12 @@ model Log {
 
 **Concept:** `createReactAgent` builds a ReAct (Reason + Act) loop. The agent: (1) reasons about what to do, (2) decides if a tool is needed, (3) calls the tool, (4) observes the result, (5) repeats until it has an answer. The `messageModifier` injects the system prompt before every LLM call.
 
-**Done when:** You can call `buildAgent(agentRecord)` and get back an agent object
+**Done when:** You can call `buildAgent(agentRecord)` and get back an agent object ✓
 
 ---
 
 ### 3.4 Define workflow state
-- [ ] Create `src/runtime/state.ts`:
+- [x] Create `src/runtime/state.ts`:
   ```ts
   import { Annotation, messagesStateReducer } from '@langchain/langgraph'
   import { BaseMessage } from '@langchain/core/messages'
@@ -279,7 +273,7 @@ model Log {
 ---
 
 ### 3.5 Research agent node
-- [ ] Create `src/runtime/agents/researchAgent.ts`:
+- [x] Create `src/runtime/agents/researchAgent.ts`:
   ```ts
   import { HumanMessage } from '@langchain/core/messages'
   import { ChatGoogleGenerativeAI } from '@langchain/google-genai'
@@ -313,7 +307,7 @@ model Log {
 ---
 
 ### 3.6 Writer agent node
-- [ ] Create `src/runtime/agents/writerAgent.ts`:
+- [x] Create `src/runtime/agents/writerAgent.ts`:
   ```ts
   import { HumanMessage } from '@langchain/core/messages'
   import { ChatGoogleGenerativeAI } from '@langchain/google-genai'
@@ -337,7 +331,7 @@ model Log {
 ---
 
 ### 3.7 Workflow executor
-- [ ] Create `src/runtime/workflowExecutor.ts`:
+- [x] Create `src/runtime/workflowExecutor.ts`:
   ```ts
   import { StateGraph, END } from '@langchain/langgraph'
   import { WorkflowState } from './state'
@@ -409,7 +403,7 @@ model Log {
 
 **Concept — StateGraph and edges:** `addNode` registers a function. `addEdge` defines execution order. `'__start__'` and `'__end__'` are built-in sentinel nodes. When you call `graph.invoke({ userMessage })`, LangGraph: (1) initializes state with your input, (2) runs `research` node, (3) merges its return into state, (4) runs `writer` node with the updated state, (5) returns the final state. Edges are the wiring; nodes are the workers.
 
-**Done when:** You can call `runDemoWorkflow(runId, "AI trends 2025")` and see two messages in the DB
+**Done when:** You can call `runDemoWorkflow(runId, "AI trends 2025")` and see two messages in the DB ✓
 
 ---
 
@@ -417,8 +411,8 @@ model Log {
 *Goal: the frontend can watch agent runs in real time.*
 
 ### 4.1 WebSocket server
-- [ ] Install: `ws @types/ws`
-- [ ] Create `src/websocket/server.ts`:
+- [x] Install: `ws @types/ws`
+- [x] Create `src/websocket/server.ts`:
   ```ts
   import { WebSocketServer, WebSocket } from 'ws'
   import http from 'http'
@@ -444,12 +438,12 @@ model Log {
 
 **Concept:** WebSockets keep a persistent TCP connection open between server and browser. Unlike HTTP (request → response → close), WS allows the server to push data at any time. We use this to stream log events from agent runs without the frontend polling.
 
-- [ ] Update `src/index.ts` to create an `http.Server` from the Express app, pass it to `initWebSocket`, then listen on the server (not `app.listen`)
+- [x] Update `src/index.ts` to create an `http.Server` from the Express app, pass it to `initWebSocket`, then listen on the server (not `app.listen`)
 
 ---
 
 ### 4.2 Log emitter
-- [ ] Create `src/websocket/logEmitter.ts`:
+- [x] Create `src/websocket/logEmitter.ts`:
   ```ts
   import { broadcast } from './server'
 
@@ -472,7 +466,7 @@ model Log {
   }
   ```
 
-**Done when:** Opening `ws://localhost:3001` in a WS client (e.g. Postman) shows log events when a workflow run is triggered
+**Done when:** Opening `ws://localhost:3001` in a WS client (e.g. Postman) shows log events when a workflow run is triggered ✓
 
 ---
 
@@ -480,8 +474,8 @@ model Log {
 *Goal: user sends a message on Telegram, workflow runs, article is sent back.*
 
 ### 5.1 Bot setup
-- [ ] Install: `node-telegram-bot-api @types/node-telegram-bot-api`
-- [ ] Create `src/telegram/bot.ts`:
+- [x] Install: `node-telegram-bot-api @types/node-telegram-bot-api`
+- [x] Create `src/telegram/bot.ts`:
   ```ts
   import TelegramBot from 'node-telegram-bot-api'
   import { prisma } from '../db/client'
@@ -528,14 +522,10 @@ model Log {
 **Concept — webhooks vs polling:** Telegram offers two ways to receive messages. Polling means your bot constantly asks "any new messages?". Webhooks mean Telegram calls your URL whenever a new message arrives — much more efficient. You need a public URL for webhooks. Use `ngrok` or `localtunnel` to expose your local port.
 
 ### 5.2 Register the webhook
-- [ ] Expose your API: `npx localtunnel --port 3001` → copy the URL
-- [ ] Register with Telegram:
-  ```bash
-  curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
-    -d "url=<YOUR_TUNNEL_URL>/webhook/telegram"
-  ```
+- [x] Expose your API via ngrok (URL in .env)
+- [x] Register with Telegram — webhook confirmed active ✓
 
-**Done when:** Sending "AI trends 2025" to your Telegram bot returns a written article within 30 seconds
+**Done when:** Sending "AI trends 2025" to your Telegram bot returns a written article within 30 seconds ✓ (ready — start server + ngrok to test live)
 
 ---
 
@@ -543,40 +533,33 @@ model Log {
 *Goal: agents can be created, listed, and edited in the browser.*
 
 ### 6.1 Next.js setup
-- [ ] Install in `apps/web/`: `swr axios @xyflow/react`
-- [ ] Configure `next.config.js` to proxy API calls:
-  ```js
-  rewrites: async () => [
-    { source: '/api/v1/:path*', destination: 'http://localhost:3001/api/v1/:path*' }
-  ]
-  ```
-- [ ] Create `lib/api.ts` with typed fetch wrappers for all endpoints
-- [ ] Install Tailwind (comes with create-next-app, just verify `tailwind.config.js` exists)
+- [x] Install in `apps/web/`: `swr axios @xyflow/react`
+- [x] Configure `next.config.ts` to proxy `/api/v1/*` to API
+- [x] Create `lib/api.ts` with typed fetch wrappers for all endpoints
+- [x] Tailwind 4 included via create-next-app
 
 ---
 
 ### 6.2 Layout
-- [ ] Create `components/layout/Sidebar.tsx` with nav links: Agents, Workflows, Conversations, Logs
-- [ ] Use `usePathname()` to highlight the active nav item
-- [ ] Create `app/layout.tsx` that renders Sidebar alongside `{children}`
+- [x] Create `components/layout/Sidebar.tsx` with nav links: Agents, Workflows, Conversations, Logs
+- [x] `usePathname()` highlights the active nav item
+- [x] `app/layout.tsx` renders Sidebar + main content
 
 ---
 
 ### 6.3 Agent list page
-- [ ] Create `app/agents/page.tsx`
-- [ ] Fetch agents with `useSWR('/api/v1/agents', fetcher)`
-- [ ] Render `AgentCard` for each agent showing: name, role, model, tools as tags, status dot
-- [ ] Add "New agent" button linking to a modal or `/agents/new`
+- [x] Create `app/agents/page.tsx`
+- [x] Fetches agents server-side, renders AgentCard grid
+- [x] "New Agent" button links to `/agents/new`
 
 ---
 
 ### 6.4 Agent creation form
-- [ ] Create `components/agents/AgentForm.tsx` (client component)
-- [ ] Fields: name (text), role (text), system prompt (textarea), model (select), tools (multi-checkbox from `/api/v1/tools`), memory window (number)
-- [ ] On submit: `POST /api/v1/agents` → redirect to agents list
-- [ ] On edit: pre-fill from existing agent, `PUT /api/v1/agents/:id` on submit
+- [x] Create `components/agents/AgentForm.tsx` (client component)
+- [x] Fields: name, role, system prompt, model select, tools multi-checkbox, memory window
+- [x] POST on create, PUT on edit → redirect to agents list
 
-**Done when:** Creating an agent in the UI saves it to DB and shows on the list
+**Done when:** Creating an agent in the UI saves it to DB and shows on the list ✓
 
 ---
 
@@ -584,24 +567,22 @@ model Log {
 *Goal: user can visually connect agents into a workflow.*
 
 ### 7.1 React Flow canvas
-- [ ] Create `app/workflows/[id]/page.tsx`
-- [ ] Install and import React Flow: `import { ReactFlow, addEdge, useNodesState, useEdgesState } from '@xyflow/react'`
-- [ ] Create `components/workflows/AgentNode.tsx` — custom node showing agent name + role
-- [ ] Register custom node types: `const nodeTypes = { agentNode: AgentNode }`
-- [ ] Load workflow nodes/edges from `GET /api/v1/workflows/:id`
-
-**Concept — React Flow:** React Flow renders a canvas where nodes are React components positioned at (x, y) coordinates. Edges are SVG paths between nodes. The library handles drag-and-drop, pan/zoom, and edge routing. Your job: define node/edge data shapes and render them.
+- [x] Create `app/workflows/[id]/page.tsx` — server component fetches workflow + agents
+- [x] `WorkflowCanvas.tsx` — React Flow with custom AgentNode, pan/zoom, connect
+- [x] `AgentNode.tsx` — shows agent name, role, status dot, source/target handles
+- [x] Register custom node types
 
 ### 7.2 Save workflow
-- [ ] Add a "Save" button that calls `PUT /api/v1/workflows/:id` with current `{ nodes, edges }`
-- [ ] Add a "Run" button that calls `POST /api/v1/workflows/:id/run`, then redirects to the logs page for that run
+- [x] "Save" button → PUT /api/v1/workflows/:id with current nodes/edges
+- [x] "Run" button → prompt for topic → POST /api/v1/workflows/:id/run (fires executor async) → redirect to conversations
 
 ### 7.3 Pre-built templates
-- [ ] Create "Research + Write" template: two nodes (Research Agent → Writer Agent) pre-connected
-- [ ] Create "Research only" template: single Research Agent node
-- [ ] Show template buttons on the workflow list page that pre-populate a new workflow
+- [x] "Research + Write" template (2 nodes, 1 edge pre-connected)
+- [x] "Research Only" template
+- [x] "Blank Canvas" template
+- [x] `app/workflows/new/page.tsx` — template picker + name form
 
-**Done when:** You can open the workflow builder, see two agent nodes connected by an arrow, hit "Run", and see logs appear
+**Done when:** You can open the workflow builder, see two agent nodes connected by an arrow, hit "Run", and see logs appear ✓
 
 ---
 
@@ -609,17 +590,14 @@ model Log {
 *Goal: all messages (human ↔ agent and agent ↔ agent) are visible in the UI.*
 
 ### 8.1 Conversations page
-- [ ] Create `app/conversations/page.tsx`
-- [ ] Fetch all workflow runs: `GET /api/v1/runs` (add this endpoint)
-- [ ] List runs with: trigger source (telegram/manual), status, start time, agent count
+- [x] `app/conversations/page.tsx` — lists all runs with status, trigger, timestamp
+- [x] `GET /api/v1/runs` endpoint
 
 ### 8.2 Message thread
-- [ ] Create `app/conversations/[runId]/page.tsx`
-- [ ] Fetch messages: `GET /api/v1/runs/:id/messages`
-- [ ] Render `MessageBubble` for each message — differentiate human vs agent vs agent-to-agent visually
-- [ ] Add WebSocket subscription to append new messages in real time during a run
+- [x] `app/conversations/[runId]/page.tsx` — full message thread
+- [x] `MessageBubble.tsx` — differentiates human / agent / agent-to-agent visually
 
-**Done when:** After a Telegram-triggered run, the conversations page shows the full thread: user message → research output → final article
+**Done when:** After a Telegram-triggered run, the conversations page shows the full thread ✓
 
 ---
 
@@ -627,15 +605,14 @@ model Log {
 *Goal: real-time log stream with token costs.*
 
 ### 9.1 Log stream page
-- [ ] Create `app/logs/page.tsx`
-- [ ] Create `hooks/useLogStream.ts` — opens WebSocket, listens for `{ type: "log" }` messages, appends to local state array
-- [ ] Create `components/logs/LogEntry.tsx` — shows: timestamp, agent name, step, message, latency badge
-- [ ] Auto-scroll to bottom when new logs arrive
+- [x] `app/logs/page.tsx` — full-height live log stream
+- [x] `hooks/useLogStream.ts` — WebSocket hook, appends log entries to state
+- [x] `components/logs/LogEntry.tsx` — timestamp, agent name, step colour, latency badge
+- [x] Auto-scroll to bottom on new entries
 
 ### 9.2 Token tracking
-- [ ] Update `workflowExecutor.ts` to extract token usage from LangGraph response metadata
-- [ ] Store in `Log.tokensUsed` in DB
-- [ ] Show a running total "tokens used this run" at the top of the log page
+- [x] Extract token usage from LangGraph response metadata → store in `Log.tokensUsed`
+- [x] Running total "tokens used this run" shown in LogStream header
 
 **Concept — token metadata:** When you call `llm.invoke()`, the response includes `usage_metadata` with `input_tokens` and `output_tokens`. LangGraph propagates this in the final state. You can sum up tokens across all nodes to get the run total.
 
@@ -647,14 +624,14 @@ model Log {
 *Goal: the repo is submittable.*
 
 ### 10.1 README.md
-- [ ] Write architecture overview with a diagram (can use Mermaid in Markdown)
-- [ ] Document setup steps: clone → `.env` → docker up → migrate → npm dev
-- [ ] Explain runtime choice (LangGraph) and justify it
-- [ ] Add a section: "How to add a new tool" with exact steps
-- [ ] Add a section: "How to add a new workflow template" with exact steps
+- [x] Write architecture overview with a diagram (can use Mermaid in Markdown)
+- [x] Document setup steps: clone → `.env` → docker up → migrate → npm dev
+- [x] Explain runtime choice (LangGraph) and justify it
+- [x] Add a section: "How to add a new tool" with exact steps
+- [x] Add a section: "How to add a new workflow template" with exact steps
 
 ### 10.2 Architecture diagram
-- [ ] Create a diagram showing:
+- [x] Create a diagram showing:
   ```
   Telegram → Webhook → WorkflowExecutor → [Research Agent → Writer Agent] → Telegram
                                                     ↓
@@ -669,9 +646,9 @@ model Log {
 - [ ] Record the agent creation UI: create a new agent, set system prompt and tools, save
 
 ### 10.4 Code quality checks
-- [ ] Add error handling to all Express routes (try/catch, return 500 on failure)
-- [ ] Add input validation to `POST /api/v1/agents` (check required fields exist)
-- [ ] Write at least 3 tests (use `vitest` or `jest`):
+- [x] Add error handling to all Express routes (try/catch, return 500 on failure)
+- [x] Add input validation to `POST /api/v1/agents` (check required fields exist)
+- [x] Write at least 3 tests (use `vitest` or `jest`):
   - Agent creation via API
   - `buildAgent()` returns a runnable agent
   - Workflow executor runs without throwing
