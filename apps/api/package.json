@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon",
-    "build": "prisma generate && tsc",
+    "postinstall": "prisma generate",
+    "build": "tsc",
     "start": "node dist/index.js",
     "migrate": "prisma migrate deploy",
     "test": "vitest run"
