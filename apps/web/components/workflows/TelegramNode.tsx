@@ -60,7 +60,7 @@ export default function TelegramNode({ id, data, selected }: NodeProps) {
     setRegistering(true)
     setWebhookStatus(null)
     try {
-      const res = await fetch(`/api/v1/workflows/${workflowId}/register-telegram`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/v1/workflows/${workflowId}/register-telegram`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ webhookBaseUrl: webhookBase.trim() }),

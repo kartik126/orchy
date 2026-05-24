@@ -100,7 +100,7 @@ export default function WorkflowCanvas({ workflowId, initialNodes, initialEdges,
         channel: channel || null,
         telegramToken: isTelegramChannel ? (telegramToken.trim() || null) : null,
       })
-      const res = await fetch(`/api/v1/workflows/${workflowId}/run`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/v1/workflows/${workflowId}/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userMessage, triggeredBy: 'manual' }),
@@ -132,7 +132,7 @@ export default function WorkflowCanvas({ workflowId, initialNodes, initialEdges,
         channel: channel || null,
         telegramToken: telegramToken.trim(),
       })
-      const res = await fetch(`/api/v1/workflows/${workflowId}/register-telegram`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/v1/workflows/${workflowId}/register-telegram`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ webhookBaseUrl: webhookBase.trim() }),
