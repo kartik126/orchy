@@ -47,9 +47,19 @@ router.put('/:id', async (req, res) => {
       data: req.body,
     })
 
-    // Re-register the bot whenever a telegram workflow is saved
     if (workflow.telegramToken && ['telegram_text', 'telegram_photo'].includes(workflow.channel ?? '')) {
       refreshBotsForToken(req.app, workflow.telegramToken)
+
+      // Auto-register webhook if PUBLIC_URL is configured
+      const publicUrl = process.env.NEXT_PUBLIC_API_URL
+      if (publicUrl) {
+        const webhookUrl = `${publicUrl.replace(/\/$/, '')}/webhook/telegram/${workflow.id}`
+        fetch(`https://api.telegram.org/bot${workflow.telegramToken}/setWebhook`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: webhookUrl }),
+        }).catch((err) => console.error('Auto webhook registration failed:', err))
+      }
     }
 
     res.json(workflow)

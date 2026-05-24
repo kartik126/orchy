@@ -40,9 +40,7 @@ export default function WorkflowCanvas({ workflowId, initialNodes, initialEdges,
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [channel, setChannel] = useState<string>(initialChannel ?? '')
   const [telegramToken, setTelegramToken] = useState<string>(initialTelegramToken ?? '')
-  const [webhookBase, setWebhookBase] = useState('')
   const [webhookStatus, setWebhookStatus] = useState<{ ok: boolean; msg: string } | null>(null)
-  const [registering, setRegistering] = useState(false)
   const [schedule, setSchedule] = useState<string>(initialSchedule ?? '')
   const [scheduleMsg, setScheduleMsg] = useState<string>(initialScheduleMsg ?? '')
   const [saving, setSaving] = useState(false)
@@ -83,6 +81,11 @@ export default function WorkflowCanvas({ workflowId, initialNodes, initialEdges,
         schedule: schedule || null,
         scheduleMsg: scheduleMsg || null,
       })
+      if (isTelegramChannel && telegramToken.trim()) {
+        setWebhookStatus({ ok: true, msg: '✓ Saved — webhook registered automatically' })
+      } else {
+        setWebhookStatus(null)
+      }
       showToast('Saved')
     } catch {
       showToast('Save failed')
@@ -113,42 +116,6 @@ export default function WorkflowCanvas({ workflowId, initialNodes, initialEdges,
     }
   }
 
-  async function handleRegisterWebhook() {
-    if (!webhookBase.trim()) {
-      setWebhookStatus({ ok: false, msg: 'Enter your public URL first.' })
-      return
-    }
-    if (!telegramToken.trim()) {
-      setWebhookStatus({ ok: false, msg: 'Save your bot token first.' })
-      return
-    }
-    setRegistering(true)
-    setWebhookStatus(null)
-    try {
-      // Save first so the token is in the DB
-      await api.workflows.update(workflowId, {
-        nodes: nodes as unknown[],
-        edges: edges as unknown[],
-        channel: channel || null,
-        telegramToken: telegramToken.trim(),
-      })
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/v1/workflows/${workflowId}/register-telegram`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ webhookBaseUrl: webhookBase.trim() }),
-      })
-      const json = await res.json()
-      if (json.ok) {
-        setWebhookStatus({ ok: true, msg: `✓ Webhook registered: ${json.webhookUrl}` })
-      } else {
-        setWebhookStatus({ ok: false, msg: json.error ?? 'Registration failed.' })
-      }
-    } catch {
-      setWebhookStatus({ ok: false, msg: 'Network error.' })
-    } finally {
-      setRegistering(false)
-    }
-  }
 
   function showToast(msg: string) {
     setToast(msg)
@@ -215,27 +182,12 @@ export default function WorkflowCanvas({ workflowId, initialNodes, initialEdges,
                 className="border border-slate-200 rounded-md px-2 py-1 text-xs font-mono w-56 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={webhookBase}
-                onChange={(e) => { setWebhookBase(e.target.value); setWebhookStatus(null) }}
-                placeholder="https://abc123.ngrok-free.app"
-                className="border border-slate-200 rounded-md px-2 py-1 text-xs w-52 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
-              />
-              <button
-                onClick={handleRegisterWebhook}
-                disabled={registering}
-                className="bg-slate-900 text-white rounded-md px-3 py-1 text-xs font-medium hover:bg-slate-700 disabled:opacity-50 shrink-0"
-              >
-                {registering ? 'Registering…' : 'Register Webhook'}
-              </button>
-              {webhookStatus && (
-                <span className={`text-xs ${webhookStatus.ok ? 'text-emerald-600' : 'text-red-500'}`}>
-                  {webhookStatus.msg}
-                </span>
-              )}
-            </div>
+            <span className="text-xs text-slate-400">Webhook auto-registers on save</span>
+            {webhookStatus && (
+              <span className={`text-xs ${webhookStatus.ok ? 'text-emerald-600' : 'text-red-500'}`}>
+                {webhookStatus.msg}
+              </span>
+            )}
           </>
         )}
 
