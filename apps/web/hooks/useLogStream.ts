@@ -51,9 +51,10 @@ export function useLogStream(runId?: string) {
 
   // Hydrate from DB on mount, collapsing start entries that have a later complete/error
   useEffect(() => {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
     const url = runId
-      ? `/api/v1/runs/${runId}/logs`
-      : '/api/v1/runs/logs/recent'
+      ? `${apiBase}/api/v1/runs/${runId}/logs`
+      : `${apiBase}/api/v1/runs/logs/recent`
 
     fetch(url)
       .then((r) => r.json())

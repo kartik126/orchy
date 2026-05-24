@@ -1,8 +1,4 @@
-// Server components need an absolute URL; browser requests go through Next.js rewrites
-const BASE =
-  typeof window === 'undefined'
-    ? `http://localhost:${process.env.API_PORT ?? 3001}/api/v1`
-    : '/api/v1'
+const BASE = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/v1`
 
 async function req<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
