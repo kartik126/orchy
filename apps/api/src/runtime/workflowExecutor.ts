@@ -7,6 +7,7 @@ export interface WorkflowInput {
   text?: string
   imageBase64?: string
   mimeType?: string
+  threadId?: string  // used for per-user memory (e.g. Telegram chat ID)
 }
 
 interface FlowNode {
@@ -103,7 +104,10 @@ export async function runWorkflow(runId: string, workflowId: string, input: Work
       })
       logEmitter.emit({ runId, agentName, step: 'start', message: `Starting ${agentName}...` })
 
-      const agent = buildAgent(agentConfig)
+      // threadId: prefer explicit (Telegram chatId), fall back to workflowId so
+      // manual runs of the same workflow share memory per agent
+      const threadId = input.threadId ?? workflowId
+      const agent = buildAgent(agentConfig, { threadId })
 
       type ContentPart =
         | { type: 'text'; text: string }

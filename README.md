@@ -192,6 +192,38 @@ Templates are defined in `apps/web/app/workflows/new/page.tsx`.
 
 ---
 
+## How to add a new messaging channel
+
+The current integration is Telegram. Adding Slack, WhatsApp, or any other channel follows the same pattern:
+
+1. **Create a handler file** (e.g. `apps/api/src/slack/bot.ts`) that:
+   - Listens for inbound messages from the channel's API/webhook
+   - Extracts the user text (or image) from the event payload
+   - Looks up a `Workflow` by `channel` field (e.g. `channel = 'slack_text'`)
+   - Creates a `WorkflowRun` and calls `runWorkflow(run.id, workflow.id, { text })`
+   - Sends the result back through the channel's API
+
+2. **Register a new webhook route** in `apps/api/src/index.ts`:
+
+```ts
+import { initSlackEvents } from './slack/bot'
+initSlackEvents(app)       // registers POST /webhook/slack
+```
+
+3. **Add channel options to the UI** in `apps/web/lib/api.ts`:
+
+```ts
+export const WORKFLOW_CHANNELS = [
+  { value: 'telegram_text',  label: 'Telegram Text' },
+  { value: 'telegram_photo', label: 'Telegram Photo' },
+  { value: 'slack_text',     label: 'Slack Message' },  // ← add here
+]
+```
+
+4. Assign the new channel value to a workflow in the builder and save. The workflow will receive messages from that channel automatically.
+
+---
+
 ## Running tests
 
 ```bash

@@ -3,6 +3,13 @@ import { z } from 'zod'
 import { google } from 'googleapis'
 import { prisma } from '../../db/client'
 
+// Column layout (0-indexed):
+// A(0): Invoice No. | B(1): Company Name | C(2): Invoice Date | D(3): Description
+// E(4): Amount | F(5): Currency | G(6): Category | H(7): Sub-category | I(8): Status
+
+const SHEET_RANGE = 'Sheet1!A:I'
+const HEADERS = ['Invoice No.', 'Company Name', 'Invoice Date', 'Description', 'Amount', 'Currency', 'Category', 'Sub-category', 'Status']
+
 function getAuthClient() {
   const keyFile = process.env.GOOGLE_SERVICE_ACCOUNT_PATH
   if (!keyFile) throw new Error('GOOGLE_SERVICE_ACCOUNT_PATH env var is not set')
@@ -10,6 +17,19 @@ function getAuthClient() {
     keyFile,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   })
+}
+
+async function ensureHeaders(sheets: ReturnType<typeof google.sheets>, sheetId: string) {
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: 'Sheet1!A1:I1' })
+  const firstRow = res.data.values?.[0] ?? []
+  if (firstRow[0] !== 'Invoice No.') {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: sheetId,
+      range: 'Sheet1!A1:I1',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [HEADERS] },
+    })
+  }
 }
 
 // ─── log_invoice ─────────────────────────────────────────────────────────────
@@ -37,7 +57,6 @@ export class LogInvoiceTool extends StructuredTool {
     const sheetId = process.env.GOOGLE_SHEET_ID
     if (!sheetId) throw new Error('GOOGLE_SHEET_ID env var is not set')
 
-    // Write to Postgres
     await prisma.invoice.create({
       data: {
         invoiceNumber: input.invoiceNumber,
@@ -56,17 +75,15 @@ export class LogInvoiceTool extends StructuredTool {
       },
     })
 
-    // Also append to Google Sheets for human visibility
     const auth = getAuthClient()
     const sheets = google.sheets({ version: 'v4', auth })
+    await ensureHeaders(sheets, sheetId)
+
     const row = [
-      new Date().toISOString(),
       input.invoiceNumber,
-      input.invoiceDate,
       input.vendor,
+      input.invoiceDate,
       input.description ?? '',
-      input.subtotal ?? '',
-      input.tax ?? '',
       input.grandTotal,
       input.currency,
       input.category ?? '',
@@ -75,7 +92,7 @@ export class LogInvoiceTool extends StructuredTool {
     ]
     await sheets.spreadsheets.values.append({
       spreadsheetId: sheetId,
-      range: 'Sheet1!A:L',
+      range: SHEET_RANGE,
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [row] },
     })
@@ -116,7 +133,6 @@ export class QueryInvoicesTool extends StructuredTool {
       where.category = { contains: input.category, mode: 'insensitive' }
     }
     if (input.month) {
-      // Accept "2025-01" or "January 2025" — normalise to YYYY-MM prefix
       const monthMatch = input.month.match(/(\d{4})-(\d{2})/)
       const namedMatch = input.month.match(/(\w+)\s+(\d{4})/)
       if (monthMatch) {
@@ -174,30 +190,29 @@ export class UpdateInvoiceTool extends StructuredTool {
 
       await prisma.invoice.update({ where: { id: invoice.id }, data: updateData })
 
-      // Mirror the update to Google Sheets
       const sheetId = process.env.GOOGLE_SHEET_ID
       if (sheetId) {
         try {
           const auth = getAuthClient()
           const sheets = google.sheets({ version: 'v4', auth })
-          const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: 'Sheet1!A:L' })
+          const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: SHEET_RANGE })
           const rows = res.data.values ?? []
-          const rowIndex = rows.findIndex((r) => r[1]?.toString().toLowerCase() === input.invoiceNumber.toLowerCase())
+          // col A (index 0) is Invoice No. in the new layout; skip header row
+          const rowIndex = rows.findIndex((r, i) => i > 0 && r[0]?.toString().toLowerCase() === input.invoiceNumber.toLowerCase())
           if (rowIndex !== -1) {
-            const sheetRow = rows[rowIndex]
-            if (input.paymentStatus) sheetRow[11] = input.paymentStatus
-            if (input.category) sheetRow[9] = input.category
-            if (input.subcategory) sheetRow[10] = input.subcategory
-            const gsheetRow = rowIndex + 1
+            const sheetRow = [...rows[rowIndex]]
+            if (input.paymentStatus) sheetRow[8] = input.paymentStatus  // col I
+            if (input.category) sheetRow[6] = input.category             // col G
+            if (input.subcategory) sheetRow[7] = input.subcategory       // col H
             await sheets.spreadsheets.values.update({
               spreadsheetId: sheetId,
-              range: `Sheet1!A${gsheetRow}:L${gsheetRow}`,
+              range: `Sheet1!A${rowIndex + 1}:I${rowIndex + 1}`,
               valueInputOption: 'USER_ENTERED',
               requestBody: { values: [sheetRow] },
             })
           }
         } catch {
-          // Sheet sync failure is non-fatal — DB is already updated
+          // Sheet sync failure is non-fatal
         }
       }
 
@@ -210,38 +225,37 @@ export class UpdateInvoiceTool extends StructuredTool {
 
     const auth = getAuthClient()
     const sheets = google.sheets({ version: 'v4', auth })
-    const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: 'Sheet1!A:L' })
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: SHEET_RANGE })
     const rows = res.data.values ?? []
 
-    // Row layout: [logged_at, invoice_number, date, vendor, desc, subtotal, tax, total, currency, category, subcategory, payment_status]
-    const rowIndex = rows.findIndex((r) => r[1]?.toString().toLowerCase() === input.invoiceNumber.toLowerCase())
+    // col A (index 0) = Invoice No., skip header row (index 0)
+    const rowIndex = rows.findIndex((r, i) => i > 0 && r[0]?.toString().toLowerCase() === input.invoiceNumber.toLowerCase())
     if (rowIndex === -1) return `Invoice ${input.invoiceNumber} not found in database or Google Sheets.`
 
-    const sheetRow = rows[rowIndex]
+    const sheetRow = [...rows[rowIndex]]
     const updates: string[] = []
 
     if (input.paymentStatus) {
-      sheetRow[11] = input.paymentStatus
-      updates.push(`paymentStatus → ${input.paymentStatus}`)
+      sheetRow[8] = input.paymentStatus
+      updates.push(`Status → ${input.paymentStatus}`)
     }
     if (input.category) {
-      sheetRow[9] = input.category
-      updates.push(`category → ${input.category}`)
+      sheetRow[6] = input.category
+      updates.push(`Category → ${input.category}`)
     }
     if (input.subcategory) {
-      sheetRow[10] = input.subcategory
-      updates.push(`subcategory → ${input.subcategory}`)
+      sheetRow[7] = input.subcategory
+      updates.push(`Sub-category → ${input.subcategory}`)
     }
 
-    const gsheetRow = rowIndex + 1 // 1-indexed
     await sheets.spreadsheets.values.update({
       spreadsheetId: sheetId,
-      range: `Sheet1!A${gsheetRow}:L${gsheetRow}`,
+      range: `Sheet1!A${rowIndex + 1}:I${rowIndex + 1}`,
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [sheetRow] },
     })
 
-    const vendor = sheetRow[3] ?? 'unknown vendor'
+    const vendor = sheetRow[1] ?? 'unknown vendor'
     return `Invoice ${input.invoiceNumber} from ${vendor} updated in Google Sheets: ${updates.join(', ')}.`
   }
 }

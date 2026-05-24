@@ -7,12 +7,13 @@ type Props = {
   agents: Agent[]
   saving: boolean
   running: boolean
+  channel: string
   onAddAgent: (agent: Agent) => void
   onSave: () => void
   onRun: (userMessage: string) => void
 }
 
-export default function WorkflowToolbar({ agents, saving, running, onAddAgent, onSave, onRun }: Props) {
+export default function WorkflowToolbar({ agents, saving, running, channel, onAddAgent, onSave, onRun }: Props) {
   const [showRun, setShowRun] = useState(false)
   const [topic, setTopic] = useState('')
 
@@ -58,26 +59,30 @@ export default function WorkflowToolbar({ agents, saving, running, onAddAgent, o
         {saving ? 'Saving...' : 'Save'}
       </button>
 
-      <button
-        onClick={() => setShowRun(true)}
-        disabled={running}
-        className="bg-violet-600 text-white rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-violet-700 disabled:opacity-50"
-      >
-        {running ? 'Running...' : '▶ Run'}
-      </button>
+      {channel === 'telegram_photo' ? (
+        <span className="text-xs text-slate-400 italic">Send a photo via Telegram to trigger</span>
+      ) : (
+        <button
+          onClick={() => setShowRun(true)}
+          disabled={running}
+          className="bg-primary text-white rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-violet-700 disabled:opacity-50"
+        >
+          {running ? 'Running...' : '▶ Run'}
+        </button>
+      )}
 
       {/* Run modal */}
       {showRun && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
             <h3 className="text-base font-semibold text-slate-900 mb-1">Run Workflow</h3>
-            <p className="text-sm text-slate-500 mb-4">Enter a topic for the Research + Write pipeline</p>
+            <p className="text-sm text-slate-500 mb-4">Enter a message to pass to the workflow</p>
             <input
               autoFocus
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleRun()}
-              placeholder="e.g. Latest developments in quantum computing"
+              placeholder="e.g. Show me all unpaid invoices"
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
             <div className="flex gap-2 justify-end">
@@ -90,7 +95,7 @@ export default function WorkflowToolbar({ agents, saving, running, onAddAgent, o
               <button
                 onClick={handleRun}
                 disabled={!topic.trim()}
-                className="bg-violet-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-violet-700 disabled:opacity-50"
+                className="bg-primary text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-violet-700 disabled:opacity-50"
               >
                 Run
               </button>

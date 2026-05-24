@@ -27,6 +27,9 @@ export default function LogEntry({ entry }: { entry: LogEntryType }) {
           {tokensUsed && (
             <Badge variant="outline" className="text-xs font-normal px-1.5 py-0">{tokensUsed} tokens</Badge>
           )}
+          {tokensUsed && (
+            <span className="text-xs text-muted-foreground">${(tokensUsed * 0.000001).toFixed(5)}</span>
+          )}
         </div>
         <p className={`text-xs mt-1 break-words ${isError ? 'text-destructive whitespace-pre-wrap' : 'text-muted-foreground'}`}>
           {message}

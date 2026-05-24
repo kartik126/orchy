@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { prisma } from '../db/client'
 import { runWorkflow } from '../runtime/workflowExecutor'
+import { refreshBotsForToken } from '../telegram/bot'
 
 const router = Router()
 
@@ -45,6 +46,12 @@ router.put('/:id', async (req, res) => {
       where: { id: req.params.id },
       data: req.body,
     })
+
+    // Re-register the bot whenever a telegram workflow is saved
+    if (workflow.telegramToken && ['telegram_text', 'telegram_photo'].includes(workflow.channel ?? '')) {
+      refreshBotsForToken(req.app, workflow.telegramToken)
+    }
+
     res.json(workflow)
   } catch (err) {
     res.status(500).json({ error: 'Failed to update workflow', code: 'WORKFLOW_UPDATE_ERROR' })
@@ -94,6 +101,36 @@ router.post('/:id/run', async (req, res) => {
     res.status(201).json(run)
   } catch (err) {
     res.status(500).json({ error: 'Failed to start workflow run', code: 'RUN_CREATE_ERROR' })
+  }
+})
+
+// Register Telegram webhook for a workflow's TelegramNode token
+router.post('/:id/register-telegram', async (req, res) => {
+  try {
+    const workflow = await prisma.workflow.findUnique({ where: { id: req.params.id } })
+    if (!workflow) return res.status(404).json({ error: 'Workflow not found', code: 'NOT_FOUND' })
+
+    const token = workflow.telegramToken
+    if (!token) return res.status(400).json({ error: 'No Telegram token configured for this workflow', code: 'NO_TOKEN' })
+
+    const { webhookBaseUrl } = req.body
+    if (!webhookBaseUrl) return res.status(400).json({ error: 'webhookBaseUrl is required', code: 'VALIDATION_ERROR' })
+
+    const webhookUrl = `${webhookBaseUrl.replace(/\/$/, '')}/webhook/telegram/${workflow.id}`
+    const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: webhookUrl }),
+    })
+    const result = await response.json() as { ok: boolean; description?: string }
+
+    if (!result.ok) {
+      return res.status(400).json({ error: result.description ?? 'Telegram rejected the webhook', code: 'TELEGRAM_ERROR' })
+    }
+
+    res.json({ ok: true, webhookUrl })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to register webhook', code: 'WEBHOOK_REG_ERROR' })
   }
 })
 

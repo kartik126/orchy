@@ -2,6 +2,12 @@ import { StructuredTool } from '@langchain/core/tools'
 import { z } from 'zod'
 import { google } from 'googleapis'
 
+// Column layout (0-indexed):
+// A(0): Invoice No. | B(1): Company Name | C(2): Invoice Date | D(3): Description
+// E(4): Amount | F(5): Currency | G(6): Category | H(7): Sub-category | I(8): Status
+
+const HEADERS = ['Invoice No.', 'Company Name', 'Invoice Date', 'Description', 'Amount', 'Currency', 'Category', 'Sub-category', 'Status']
+
 function getAuthClient() {
   const keyFile = process.env.GOOGLE_SERVICE_ACCOUNT_PATH
   if (!keyFile) throw new Error('GOOGLE_SERVICE_ACCOUNT_PATH env var is not set')
@@ -9,6 +15,19 @@ function getAuthClient() {
     keyFile,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   })
+}
+
+async function ensureHeaders(sheets: ReturnType<typeof google.sheets>, sheetId: string) {
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: 'Sheet1!A1:I1' })
+  const firstRow = res.data.values?.[0] ?? []
+  if (firstRow[0] !== 'Invoice No.') {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: sheetId,
+      range: 'Sheet1!A1:I1',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [HEADERS] },
+    })
+  }
 }
 
 export class ReadGoogleSheetTool extends StructuredTool {
@@ -49,13 +68,13 @@ export class AppendInvoiceRowTool extends StructuredTool {
 
   schema = z.object({
     invoice_number: z.string().describe('Invoice number or ID'),
-    date: z.string().describe('Invoice date'),
+    date: z.string().describe('Invoice date in YYYY-MM-DD'),
     vendor_name: z.string().describe('Name of the vendor / supplier'),
     description: z.string().describe('Summary of goods or services'),
-    subtotal: z.string().describe('Subtotal before tax'),
-    tax: z.string().describe('Tax amount, empty string if none'),
-    total: z.string().describe('Total amount due'),
+    total: z.string().describe('Total amount due (grand total)'),
     currency: z.string().describe('Currency code, e.g. USD, INR'),
+    category: z.string().optional().describe('Expense category'),
+    subcategory: z.string().optional().describe('Expense sub-category'),
   })
 
   async _call(input: z.infer<typeof this.schema>): Promise<string> {
@@ -64,17 +83,18 @@ export class AppendInvoiceRowTool extends StructuredTool {
 
     const auth = getAuthClient()
     const sheets = google.sheets({ version: 'v4', auth })
+    await ensureHeaders(sheets, sheetId)
 
     const row = [
-      new Date().toISOString(),
       input.invoice_number,
-      input.date,
       input.vendor_name,
+      input.date,
       input.description,
-      input.subtotal,
-      input.tax,
       input.total,
       input.currency,
+      input.category ?? '',
+      input.subcategory ?? '',
+      'unpaid',
     ]
 
     await sheets.spreadsheets.values.append({

@@ -7,7 +7,8 @@ import workflowRouter from './routes/workflows'
 import runRouter from './routes/runs'
 import toolRouter from './routes/tools'
 import { initWebSocket } from './websocket/server'
-import { initTelegramWebhook } from './telegram/bot'
+import { initTelegramBots } from './telegram/bot'
+import { startScheduler } from './scheduler'
 
 const app = express()
 
@@ -25,13 +26,14 @@ app.use('/api/v1/tools', toolRouter)
 
 const server = http.createServer(app)
 initWebSocket(server)
-initTelegramWebhook(app)
 
 const PORT = process.env.API_PORT || 3001
 
 server.listen(PORT, () => {
   console.log(`API running on port ${PORT}`)
   console.log(`WebSocket ready on ws://localhost:${PORT}`)
+  startScheduler()
+  initTelegramBots(app).catch((err) => console.error('Failed to init Telegram bots:', err))
 })
 
 export { app, server }

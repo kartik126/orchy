@@ -16,6 +16,7 @@ export default function LogStream({ runId }: { runId?: string }) {
   }, [logs])
 
   const totalTokens = logs.reduce((sum, l) => sum + (l.payload.tokensUsed ?? 0), 0)
+  const totalCost = totalTokens * 0.000001
 
   const statusVariant =
     status === 'running' ? 'warning' :
@@ -35,7 +36,7 @@ export default function LogStream({ runId }: { runId?: string }) {
         </div>
         <div className="flex items-center gap-3">
           {totalTokens > 0 && (
-            <span className="text-xs text-muted-foreground">{totalTokens.toLocaleString()} tokens</span>
+            <span className="text-xs text-muted-foreground">{totalTokens.toLocaleString()} tokens · ${totalCost.toFixed(4)}</span>
           )}
           {logs.length > 0 && (
             <Button variant="outline" size="sm" onClick={clearLogs} className="h-7 text-xs">

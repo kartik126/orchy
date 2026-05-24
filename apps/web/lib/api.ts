@@ -35,6 +35,9 @@ export type Workflow = {
   nodes: unknown[]
   edges: unknown[]
   channel: string | null
+  telegramToken: string | null
+  schedule: string | null
+  scheduleMsg: string | null
   createdAt: string
   _count?: { runs: number }
 }

@@ -18,7 +18,7 @@ export default function Sidebar() {
   return (
     <aside className="w-56 fixed left-0 top-0 h-full bg-muted/60 border-r flex flex-col">
       <div className="px-4 py-4 flex items-center gap-1">
-        <div className="flex items-center justify-center size-7 rounded-md bg-foreground text-background shrink-0">
+        <div className="flex items-center justify-center size-7 rounded-md bg-primary text-primary-foreground shrink-0">
           <img src={"/logo.png"} className="h-6 w-6"/>
         </div>
         <span className="text-sm font-semibold tracking-tight" style={{ fontFamily: 'var(--font-cal)' }}>
@@ -41,11 +41,11 @@ export default function Sidebar() {
                 className={cn(
                   'flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors',
                   active
-                    ? 'bg-foreground text-background font-medium'
+                    ? 'bg-primary text-primary-foreground font-medium'
                     : 'text-muted-foreground hover:text-foreground hover:bg-border',
                 )}
               >
-                <Icon className={cn('size-4 shrink-0', active ? 'text-background' : 'text-muted-foreground')} />
+                <Icon className={cn('size-4 shrink-0', active ? 'text-primary-foreground' : 'text-muted-foreground')} />
                 {label}
               </Link>
             )

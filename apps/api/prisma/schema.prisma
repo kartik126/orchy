@@ -24,13 +24,16 @@ model Agent {
 }
 
 model Workflow {
-  id        String        @id @default(cuid())
-  name      String
-  nodes     Json
-  edges     Json
-  channel   String?
-  createdAt DateTime      @default(now())
-  runs      WorkflowRun[]
+  id           String        @id @default(cuid())
+  name         String
+  nodes        Json
+  edges        Json
+  channel      String?
+  telegramToken String?
+  schedule     String?
+  scheduleMsg  String?
+  createdAt    DateTime      @default(now())
+  runs         WorkflowRun[]
 }
 
 model WorkflowRun {

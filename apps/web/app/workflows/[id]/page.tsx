@@ -16,7 +16,7 @@ export default async function WorkflowBuilderPage({ params }: { params: Promise<
     return <div className="p-8"><p className="text-slate-500">Workflow not found.</p></div>
   }
 
-  const initialNodes = (workflow.nodes ?? []) as Node[]
+  const initialNodes = ((workflow.nodes ?? []) as Node[]).filter((n) => n.type !== 'telegramNode')
   const initialEdges = (workflow.edges ?? []) as Edge[]
 
   return (
@@ -32,6 +32,9 @@ export default async function WorkflowBuilderPage({ params }: { params: Promise<
           initialNodes={initialNodes}
           initialEdges={initialEdges}
           initialChannel={workflow.channel ?? null}
+          initialTelegramToken={workflow.telegramToken ?? null}
+          initialSchedule={workflow.schedule ?? null}
+          initialScheduleMsg={workflow.scheduleMsg ?? null}
           agents={agents}
         />
       </div>

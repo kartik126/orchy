@@ -16,6 +16,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import AgentNode from './AgentNode'
 import WorkflowToolbar from './WorkflowToolbar'
+import SchedulePicker from './SchedulePicker'
 import { api, WORKFLOW_CHANNELS } from '@/lib/api'
 import type { Agent } from '@/lib/api'
 
@@ -26,17 +27,28 @@ type Props = {
   initialNodes: Node[]
   initialEdges: Edge[]
   initialChannel: string | null
+  initialTelegramToken: string | null
+  initialSchedule: string | null
+  initialScheduleMsg: string | null
   agents: Agent[]
 }
 
-export default function WorkflowCanvas({ workflowId, initialNodes, initialEdges, initialChannel, agents }: Props) {
+export default function WorkflowCanvas({ workflowId, initialNodes, initialEdges, initialChannel, initialTelegramToken, initialSchedule, initialScheduleMsg, agents }: Props) {
   const router = useRouter()
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [channel, setChannel] = useState<string>(initialChannel ?? '')
+  const [telegramToken, setTelegramToken] = useState<string>(initialTelegramToken ?? '')
+  const [webhookBase, setWebhookBase] = useState('')
+  const [webhookStatus, setWebhookStatus] = useState<{ ok: boolean; msg: string } | null>(null)
+  const [registering, setRegistering] = useState(false)
+  const [schedule, setSchedule] = useState<string>(initialSchedule ?? '')
+  const [scheduleMsg, setScheduleMsg] = useState<string>(initialScheduleMsg ?? '')
   const [saving, setSaving] = useState(false)
   const [running, setRunning] = useState(false)
   const [toast, setToast] = useState('')
+
+  const isTelegramChannel = channel === 'telegram_text' || channel === 'telegram_photo'
 
   const onConnect = useCallback(
     (connection: Connection) =>
@@ -66,6 +78,9 @@ export default function WorkflowCanvas({ workflowId, initialNodes, initialEdges,
         nodes: nodes as unknown[],
         edges: edges as unknown[],
         channel: channel || null,
+        telegramToken: isTelegramChannel ? (telegramToken.trim() || null) : null,
+        schedule: schedule || null,
+        scheduleMsg: scheduleMsg || null,
       })
       showToast('Saved')
     } catch {
@@ -82,6 +97,7 @@ export default function WorkflowCanvas({ workflowId, initialNodes, initialEdges,
         nodes: nodes as unknown[],
         edges: edges as unknown[],
         channel: channel || null,
+        telegramToken: isTelegramChannel ? (telegramToken.trim() || null) : null,
       })
       const res = await fetch(`/api/v1/workflows/${workflowId}/run`, {
         method: 'POST',
@@ -96,6 +112,43 @@ export default function WorkflowCanvas({ workflowId, initialNodes, initialEdges,
     }
   }
 
+  async function handleRegisterWebhook() {
+    if (!webhookBase.trim()) {
+      setWebhookStatus({ ok: false, msg: 'Enter your public URL first.' })
+      return
+    }
+    if (!telegramToken.trim()) {
+      setWebhookStatus({ ok: false, msg: 'Save your bot token first.' })
+      return
+    }
+    setRegistering(true)
+    setWebhookStatus(null)
+    try {
+      // Save first so the token is in the DB
+      await api.workflows.update(workflowId, {
+        nodes: nodes as unknown[],
+        edges: edges as unknown[],
+        channel: channel || null,
+        telegramToken: telegramToken.trim(),
+      })
+      const res = await fetch(`/api/v1/workflows/${workflowId}/register-telegram`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ webhookBaseUrl: webhookBase.trim() }),
+      })
+      const json = await res.json()
+      if (json.ok) {
+        setWebhookStatus({ ok: true, msg: `✓ Webhook registered: ${json.webhookUrl}` })
+      } else {
+        setWebhookStatus({ ok: false, msg: json.error ?? 'Registration failed.' })
+      }
+    } catch {
+      setWebhookStatus({ ok: false, msg: 'Network error.' })
+    } finally {
+      setRegistering(false)
+    }
+  }
+
   function showToast(msg: string) {
     setToast(msg)
     setTimeout(() => setToast(''), 2500)
@@ -107,28 +160,68 @@ export default function WorkflowCanvas({ workflowId, initialNodes, initialEdges,
         agents={agents}
         saving={saving}
         running={running}
+        channel={channel}
         onAddAgent={addAgentNode}
         onSave={handleSave}
         onRun={handleRun}
       />
 
-      <div className="px-4 py-2 border-b border-slate-100 bg-slate-50 flex items-center gap-3 text-sm">
-        <span className="text-slate-500 font-medium shrink-0">Telegram channel</span>
-        <select
-          value={channel}
-          onChange={(e) => setChannel(e.target.value)}
-          className="border border-slate-200 rounded-md px-2 py-1 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
-        >
-          <option value="">— None —</option>
-          {WORKFLOW_CHANNELS.map((c) => (
-            <option key={c.value} value={c.value}>{c.label}</option>
-          ))}
-        </select>
-        {channel && (
-          <span className="text-xs text-slate-400">
-            Telegram will route <b>{WORKFLOW_CHANNELS.find((c) => c.value === channel)?.label.toLowerCase()}</b> messages to this workflow
-          </span>
+      <div className="px-4 py-2 border-b border-slate-100 bg-slate-50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+        <div className="flex items-center gap-2">
+          <span className="text-slate-500 font-medium shrink-0">Channel</span>
+          <select
+            value={channel}
+            onChange={(e) => { setChannel(e.target.value); setWebhookStatus(null) }}
+            className="border border-slate-200 rounded-md px-2 py-1 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
+          >
+            <option value="">— None —</option>
+            {WORKFLOW_CHANNELS.map((c) => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {isTelegramChannel && (
+          <>
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500 font-medium shrink-0">Bot Token</span>
+              <input
+                type="text"
+                value={telegramToken}
+                onChange={(e) => setTelegramToken(e.target.value)}
+                placeholder="123456789:AAF..."
+                className="border border-slate-200 rounded-md px-2 py-1 text-xs font-mono w-56 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={webhookBase}
+                onChange={(e) => { setWebhookBase(e.target.value); setWebhookStatus(null) }}
+                placeholder="https://abc123.ngrok-free.app"
+                className="border border-slate-200 rounded-md px-2 py-1 text-xs w-52 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
+              />
+              <button
+                onClick={handleRegisterWebhook}
+                disabled={registering}
+                className="bg-slate-900 text-white rounded-md px-3 py-1 text-xs font-medium hover:bg-slate-700 disabled:opacity-50 shrink-0"
+              >
+                {registering ? 'Registering…' : 'Register Webhook'}
+              </button>
+              {webhookStatus && (
+                <span className={`text-xs ${webhookStatus.ok ? 'text-emerald-600' : 'text-red-500'}`}>
+                  {webhookStatus.msg}
+                </span>
+              )}
+            </div>
+          </>
         )}
+
+        <SchedulePicker
+          schedule={schedule || null}
+          scheduleMsg={scheduleMsg}
+          onSave={(s, msg) => { setSchedule(s ?? ''); setScheduleMsg(msg) }}
+        />
       </div>
 
       <div className="flex-1">
