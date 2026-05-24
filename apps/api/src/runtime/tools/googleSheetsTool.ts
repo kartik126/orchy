@@ -9,10 +9,10 @@ import { google } from 'googleapis'
 const HEADERS = ['Invoice No.', 'Company Name', 'Invoice Date', 'Description', 'Amount', 'Currency', 'Category', 'Sub-category', 'Status']
 
 function getAuthClient() {
-  const keyFile = process.env.GOOGLE_SERVICE_ACCOUNT_PATH
-  if (!keyFile) throw new Error('GOOGLE_SERVICE_ACCOUNT_PATH env var is not set')
+  const json = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
+  if (!json) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON env var is not set')
   return new google.auth.GoogleAuth({
-    keyFile,
+    credentials: JSON.parse(json),
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   })
 }
