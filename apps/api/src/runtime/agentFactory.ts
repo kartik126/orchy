@@ -3,7 +3,21 @@ import { createReactAgent } from '@langchain/langgraph/prebuilt'
 import { MemorySaver } from '@langchain/langgraph'
 import { SystemMessage, trimMessages } from '@langchain/core/messages'
 import { getTools } from './toolRegistry'
-import type { Agent } from '@prisma/client'
+
+export type AgentConfig = {
+  id: string
+  name: string
+  role: string
+  systemPrompt: string
+  model: string
+  tools: string[]
+  memoryType: string
+  memoryWindow: number
+  guardrails: unknown
+  channelId: string | null
+  createdAt: Date
+  updatedAt: Date
+}
 
 type Guardrails = {
   maxTokens?: number
@@ -14,7 +28,7 @@ type Guardrails = {
 // One global checkpointer shared across all agents — keyed by thread_id internally
 const checkpointer = new MemorySaver()
 
-function buildSystemPrompt(agentConfig: Agent): string {
+function buildSystemPrompt(agentConfig: AgentConfig): string {
   const guardrails = (agentConfig.guardrails ?? {}) as Guardrails
   const today = new Date().toISOString().split('T')[0]
   const lines: string[] = [`Today's date is ${today}.`, agentConfig.systemPrompt]
@@ -34,7 +48,7 @@ function buildSystemPrompt(agentConfig: Agent): string {
 }
 
 export function buildAgent(
-  agentConfig: Agent,
+  agentConfig: AgentConfig,
   options?: { threadId?: string },
 ) {
   const guardrails = (agentConfig.guardrails ?? {}) as Guardrails

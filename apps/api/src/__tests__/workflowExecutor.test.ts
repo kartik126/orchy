@@ -82,7 +82,7 @@ describe('runWorkflow()', () => {
   it('updates run status to running then completed', async () => {
     await runWorkflow('run-2', WORKFLOW_ID, { text: 'quantum computing' })
     const updateCalls = vi.mocked(prisma.workflowRun.update).mock.calls
-    const statuses = updateCalls.map((c) => (c[0] as { data: { status: string } }).data.status)
+    const statuses = updateCalls.map((c: unknown[]) => (c[0] as { data: { status: string } }).data.status)
     expect(statuses).toContain('running')
     expect(statuses).toContain('completed')
   })
@@ -111,7 +111,7 @@ describe('runWorkflow()', () => {
     expect(logEmitter.status).toHaveBeenCalledWith('run-5', 'failed')
 
     const updateCalls = vi.mocked(prisma.workflowRun.update).mock.calls
-    const statuses = updateCalls.map((c) => (c[0] as { data: { status: string } }).data.status)
+    const statuses = updateCalls.map((c: unknown[]) => (c[0] as { data: { status: string } }).data.status)
     expect(statuses).toContain('failed')
   })
 

@@ -64,7 +64,7 @@ router.delete('/:id', async (req, res) => {
       where: { workflowId: req.params.id },
       select: { id: true },
     })
-    const runIds = runs.map((r) => r.id)
+    const runIds = runs.map((r: { id: string }) => r.id)
     await prisma.log.deleteMany({ where: { runId: { in: runIds } } })
     await prisma.message.deleteMany({ where: { runId: { in: runIds } } })
     await prisma.workflowRun.deleteMany({ where: { workflowId: req.params.id } })

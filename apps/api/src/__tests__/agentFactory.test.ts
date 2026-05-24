@@ -25,7 +25,8 @@ vi.mock('@langchain/community/tools/calculator', () => ({
 }))
 
 import { buildAgent } from '../runtime/agentFactory.js'
-import type { Agent } from '@prisma/client'
+import type { AgentConfig } from '../runtime/agentFactory.js'
+type Agent = AgentConfig
 
 const fakeAgent: Agent = {
   id: 'agent-1',

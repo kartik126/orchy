@@ -16,9 +16,9 @@ function ordinal(n: number) {
   return n + (s[(v - 20) % 10] || s[v] || s[0])
 }
 
-function toCron(freq: Frequency, hour: number, minute: number, ampm: 'AM' | 'PM', days: number[], monthDay: number): string {
+function toCron(freq: Frequency, hour: number, minute: string, ampm: 'AM' | 'PM', days: number[], monthDay: number): string {
   const h = ampm === 'PM' ? (hour === 12 ? 12 : hour + 12) : (hour === 12 ? 0 : hour)
-  const m = parseInt(minute)
+  const m = parseInt(minute, 10)
   if (freq === 'hourly') return `${m} * * * *`
   if (freq === 'daily') return `${m} ${h} * * *`
   if (freq === 'weekly') return `${m} ${h} * * ${days.length ? days.join(',') : '*'}`

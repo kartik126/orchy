@@ -144,7 +144,7 @@ export async function initTelegramBots(app: Application) {
   const byToken = new Map<string, TokenGroup>()
   for (const wf of workflows) {
     const token = wf.telegramToken!
-    const entry = byToken.get(token) ?? { token }
+    const entry: TokenGroup = byToken.get(token) ?? { token }
     if (wf.channel === 'telegram_text') entry.textWorkflowId = wf.id
     if (wf.channel === 'telegram_photo') entry.photoWorkflowId = wf.id
     byToken.set(token, entry)
