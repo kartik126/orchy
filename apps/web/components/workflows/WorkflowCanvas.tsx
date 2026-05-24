@@ -15,6 +15,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import AgentNode from './AgentNode'
+import { InfoPopover } from '@/components/ui/info-popover'
 import WorkflowToolbar from './WorkflowToolbar'
 import SchedulePicker from './SchedulePicker'
 import { api, WORKFLOW_CHANNELS } from '@/lib/api'
@@ -166,13 +167,13 @@ export default function WorkflowCanvas({ workflowId, initialNodes, initialEdges,
         onRun={handleRun}
       />
 
-      <div className="px-4 py-2 border-b border-slate-100 bg-slate-50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+      <div className="relative z-10 overflow-visible px-4 py-2 border-b border-slate-100 bg-slate-50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
         <div className="flex items-center gap-2">
           <span className="text-slate-500 font-medium shrink-0">Channel</span>
           <select
             value={channel}
             onChange={(e) => { setChannel(e.target.value); setWebhookStatus(null) }}
-            className="border border-slate-200 rounded-md px-2 py-1 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
+            className="border border-slate-200 rounded-md px-2 py-1 text-xs bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
           >
             <option value="">— None —</option>
             {WORKFLOW_CHANNELS.map((c) => (
@@ -184,7 +185,28 @@ export default function WorkflowCanvas({ workflowId, initialNodes, initialEdges,
         {isTelegramChannel && (
           <>
             <div className="flex items-center gap-2">
-              <span className="text-slate-500 font-medium shrink-0">Bot Token</span>
+              <span className="text-slate-500 font-medium shrink-0">Telegram Bot Token</span>
+              <InfoPopover side="bottom" panelClassName="w-72">
+                <p className="mb-1.5 font-medium text-slate-700">Get a Telegram bot token</p>
+                <ol className="list-decimal space-y-1 pl-4 text-slate-600">
+                  <li>
+                    Open Telegram and message{' '}
+                    <a
+                      href="https://t.me/BotFather"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-slate-800 underline-offset-2 hover:underline"
+                    >
+                      @BotFather
+                    </a>
+                  </li>
+                  <li>
+                    Send <span className="font-mono text-slate-800">/newbot</span> and follow the prompts
+                  </li>
+                  <li>Choose a display name and username for your bot</li>
+                  <li>Copy the token BotFather sends and paste it here</li>
+                </ol>
+              </InfoPopover>
               <input
                 type="text"
                 value={telegramToken}
@@ -222,6 +244,21 @@ export default function WorkflowCanvas({ workflowId, initialNodes, initialEdges,
           scheduleMsg={scheduleMsg}
           onSave={(s, msg) => { setSchedule(s ?? ''); setScheduleMsg(msg) }}
         />
+
+        <div className="flex items-center gap-1">
+          <a
+            className="flex items-center gap-2 border border-slate-200 bg-white p-1 rounded-md text-xs text-slate-500 hover:text-slate-700"
+            href="https://docs.google.com/spreadsheets/d/14d_-eG2z9F0L4MculJzueWZY1FVkV_voezsixM93ahg/edit?usp=sharing"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img src="/sheets.png" alt="" className="h-4 w-4" />
+            Google sheet
+          </a>
+          <InfoPopover side="bottom">
+            For demo purposes, you cannot use your own Google Sheet.
+          </InfoPopover>
+        </div>
       </div>
 
       <div className="flex-1">
