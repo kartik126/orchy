@@ -28,4 +28,13 @@ export const logEmitter = {
   status(runId: string, status: string) {
     broadcastFn?.({ type: 'status', payload: { runId, status, timestamp: new Date().toISOString() } })
   },
+  message(runId: string, msg: { id: string; fromAgent: string; toAgent: string; content: string; role: string; createdAt: Date }) {
+    broadcastFn?.({ type: 'message', payload: { runId, ...msg, createdAt: msg.createdAt.toISOString() } })
+  },
+  streamStart(runId: string, agentName: string) {
+    broadcastFn?.({ type: 'stream_start', payload: { runId, agentName } })
+  },
+  token(runId: string, agentName: string, token: string) {
+    broadcastFn?.({ type: 'token', payload: { runId, agentName, token } })
+  },
 }

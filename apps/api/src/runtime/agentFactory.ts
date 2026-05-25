@@ -64,6 +64,7 @@ export function buildAgent(
   const llm = new ChatGoogleGenerativeAI({
     model: agentConfig.model,
     apiKey: process.env.GOOGLE_API_KEY,
+    streaming: true,
     ...(guardrails.maxTokens ? { maxOutputTokens: guardrails.maxTokens } : {}),
   })
 
@@ -92,7 +93,7 @@ export function buildAgent(
 
   return {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    invoke: (input: any) =>
-      agent.invoke(input, { configurable: { thread_id: threadId } }),
+    invoke: (input: any, opts?: { callbacks?: any[] }) =>
+      agent.invoke(input, { configurable: { thread_id: threadId }, callbacks: opts?.callbacks }),
   }
 }

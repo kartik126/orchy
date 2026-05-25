@@ -1,4 +1,5 @@
-import { HumanMessage, AIMessage, BaseMessage } from '@langchain/core/messages'
+import { HumanMessage } from '@langchain/core/messages'
+import { BaseCallbackHandler } from '@langchain/core/callbacks/base'
 import { buildAgent } from './agentFactory'
 import { prisma } from '../db/client'
 import { logEmitter } from '../websocket/logEmitter'
@@ -52,13 +53,6 @@ function topoSort(nodes: FlowNode[], edges: FlowEdge[]): FlowNode[] {
   return sorted
 }
 
-function extractTokens(messages: AIMessage[]): number {
-  return messages.reduce((sum, msg) => {
-    const meta = msg.usage_metadata
-    if (!meta) return sum
-    return sum + (meta.input_tokens ?? 0) + (meta.output_tokens ?? 0)
-  }, 0)
-}
 
 export async function runWorkflow(runId: string, workflowId: string, input: WorkflowInput) {
   await prisma.workflowRun.update({ where: { id: runId }, data: { status: 'running' } })
@@ -139,11 +133,33 @@ export async function runWorkflow(runId: string, workflowId: string, input: Work
       const messageContent: string | ContentPart[] =
         parts.length === 1 && parts[0].type === 'text' ? parts[0].text : parts
 
+      let output = ''
+      let tokensUsed = 0
+      logEmitter.streamStart(runId, agentName)
+
+      // Callback that fires on every token the LLM emits
+      const tokenCallback = new (class extends BaseCallbackHandler {
+        name = 'TokenStreamer'
+        handleLLMNewToken(token: string) {
+          if (!token) return
+          output += token
+          logEmitter.token(runId, agentName, token)
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        handleLLMEnd(llmOutput: any) {
+          const usage = llmOutput?.llmOutput?.usageMetadata ?? llmOutput?.llmOutput?.tokenUsage
+          if (usage) {
+            tokensUsed =
+              (usage.promptTokenCount ?? usage.promptTokens ?? 0) +
+              (usage.candidatesTokenCount ?? usage.completionTokens ?? 0)
+          }
+        }
+      })()
+
+      const agentInput = { messages: [new HumanMessage({ content: messageContent })] }
       let result
       try {
-        result = await agent.invoke({
-          messages: [new HumanMessage({ content: messageContent })],
-        })
+        result = await agent.invoke(agentInput, { callbacks: [tokenCallback] })
       } catch (err) {
         const latencyMs = Date.now() - start
         const errMsg = err instanceof Error ? err.message : String(err)
@@ -154,21 +170,30 @@ export async function runWorkflow(runId: string, workflowId: string, input: Work
         throw err
       }
 
+      // Derive output from result if callback collected nothing (non-streaming model)
+      if (!output) {
+        const lastMsg = result.messages[result.messages.length - 1]
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        output = typeof lastMsg.content === 'string'
+          ? lastMsg.content
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          : Array.isArray(lastMsg.content)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ? (lastMsg.content as any[]).map((p: any) => (p.type === 'text' ? (p.text ?? '') : '')).join('')
+            : JSON.stringify(lastMsg.content)
+        // Emit the full output as a single token so the UI still shows it
+        logEmitter.token(runId, agentName, output)
+      }
+
       const latencyMs = Date.now() - start
-      const aiMessages = (result.messages as BaseMessage[]).filter(
-        (m) => m instanceof AIMessage,
-      ) as AIMessage[]
-      const tokensUsed = extractTokens(aiMessages)
-      const lastMsg = result.messages[result.messages.length - 1] as BaseMessage
-      const output =
-        typeof lastMsg.content === 'string' ? lastMsg.content : JSON.stringify(lastMsg.content)
 
       const nextName =
         i < sortedNodes.length - 1 ? (sortedNodes[i + 1].data.label ?? 'next agent') : 'user'
 
-      await prisma.message.create({
+      const savedMsg = await prisma.message.create({
         data: { runId, fromAgent: agentName, toAgent: nextName, content: output, role: 'agent' },
       })
+      logEmitter.message(runId, savedMsg)
       await prisma.log.create({
         data: { runId, agentName, step: 'complete', output, latencyMs, tokensUsed },
       })

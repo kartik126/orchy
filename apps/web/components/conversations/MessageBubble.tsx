@@ -1,5 +1,6 @@
 import type { Message } from '@/lib/api'
 import { Badge } from '@/components/ui/badge'
+import MarkdownContent from './MarkdownContent'
 
 export default function MessageBubble({ message }: { message: Message }) {
   const isHuman = message.role === 'human'
@@ -14,7 +15,7 @@ export default function MessageBubble({ message }: { message: Message }) {
         {isAgentToAgent && <Badge variant="warning" className="text-xs">agent→agent</Badge>}
       </div>
       <div
-        className={`max-w-2xl px-4 py-3 rounded-xl text-sm leading-relaxed whitespace-pre-wrap ${
+        className={`max-w-2xl px-4 py-3 rounded-xl text-sm leading-relaxed ${
           isHuman
             ? 'bg-primary text-primary-foreground rounded-tr-sm'
             : isAgentToAgent
@@ -22,7 +23,7 @@ export default function MessageBubble({ message }: { message: Message }) {
             : 'bg-card border text-foreground rounded-tl-sm'
         }`}
       >
-        {message.content}
+        {isHuman ? <span>{message.content}</span> : <MarkdownContent content={message.content} />}
       </div>
       <span className="text-xs text-muted-foreground">
         {new Date(message.createdAt).toLocaleTimeString()}
