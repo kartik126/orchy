@@ -74,7 +74,14 @@ export default function NewWorkflowPage() {
     setError('')
     const template = TEMPLATES.find((t) => t.id === templateId)!
     try {
-      const workflow = await api.workflows.create({ name: name.trim(), nodes: template.nodes, edges: template.edges })
+      const agents = await api.agents.list()
+      const roleMap = new Map(agents.map((a) => [a.role, a.id]))
+      // Fill agentId by matching role against existing agents
+      const nodes = template.nodes.map((n) => ({
+        ...n,
+        data: { ...n.data, agentId: roleMap.get(n.data.role) ?? '' },
+      }))
+      const workflow = await api.workflows.create({ name: name.trim(), nodes, edges: template.edges })
       router.push(`/workflows/${workflow.id}`)
     } catch {
       setError('Failed to create workflow')
