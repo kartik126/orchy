@@ -84,8 +84,8 @@ export function useLogStream(runId?: string) {
 
   // Append real-time WS events on top, collapsing start → complete/error in place
   useEffect(() => {
-    let wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001'
-    if (window.location.protocol === 'https:') wsUrl = wsUrl.replace(/^ws:\/\//, 'wss://')
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+    const wsUrl = apiUrl.replace(/^https:\/\//, 'wss://').replace(/^http:\/\//, 'ws://')
     const ws = new WebSocket(wsUrl)
 
     ws.onmessage = (event) => {
@@ -96,6 +96,9 @@ export function useLogStream(runId?: string) {
         setStatus(data.payload.status ?? 'unknown')
         return
       }
+
+      // Only process structured log events — ignore token/stream_start/message events
+      if (data.type !== 'log') return
 
       setLogs((prev) => {
         // If this is a complete/error event, find and replace the matching start entry
