@@ -65,7 +65,7 @@ export default function WorkflowToolbar({ agents, saving, running, channel, onAd
         <button
           onClick={() => setShowRun(true)}
           disabled={running}
-          className="bg-primary text-white rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-violet-700 disabled:opacity-50"
+          className="bg-primary text-white rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-gray-700 disabled:opacity-50"
         >
           {running ? 'Running...' : '▶ Run'}
         </button>
@@ -83,7 +83,7 @@ export default function WorkflowToolbar({ agents, saving, running, channel, onAd
               onChange={(e) => setTopic(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleRun()}
               placeholder="e.g. Show me all unpaid invoices"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-gray-500"
             />
             <div className="flex gap-2 justify-end">
               <button

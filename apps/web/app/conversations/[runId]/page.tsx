@@ -36,8 +36,9 @@ export default function ConversationPage() {
       .then(([r, msgs]) => { setRun(r); setMessages(msgs) })
       .catch(() => setNotFound(true))
 
-    // WebSocket for live updates
-    const wsUrl = (process.env.NEXT_PUBLIC_WS_URL ?? 'ws://localhost:3001').replace(/^http/, 'ws')
+    // WebSocket for live updates — derive wss/ws from the API URL so HTTPS pages always use wss
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+    const wsUrl = apiUrl.replace(/^https:\/\//, 'wss://').replace(/^http:\/\//, 'ws://')
     const ws = new WebSocket(wsUrl)
     wsRef.current = ws
 
