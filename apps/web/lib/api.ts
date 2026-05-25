@@ -52,6 +52,7 @@ export type WorkflowRun = {
   triggeredBy: string
   startedAt: string
   finishedAt: string | null
+  error: string | null
   workflow?: { name: string }
 }
 

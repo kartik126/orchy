@@ -101,9 +101,14 @@ export default function ConversationPage() {
       </div>
 
       <div className="max-w-3xl space-y-4">
+        {run.status === 'failed' && run.error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <span className="font-semibold">Run failed: </span>{run.error}
+          </div>
+        )}
         {messages.length === 0 && !streaming ? (
           <p className="text-muted-foreground text-sm">
-            {isLive ? 'Waiting for messages…' : 'No messages.'}
+            {isLive ? 'Waiting for messages…' : run.status === 'failed' ? '' : 'No messages.'}
           </p>
         ) : (
           messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)

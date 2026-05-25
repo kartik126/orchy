@@ -45,6 +45,7 @@ model WorkflowRun {
   triggeredBy String    @default("manual")
   startedAt   DateTime  @default(now())
   finishedAt  DateTime?
+  error       String?
   messages    Message[]
   logs        Log[]
 }

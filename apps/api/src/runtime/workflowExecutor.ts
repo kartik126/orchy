@@ -65,9 +65,10 @@ export async function runWorkflow(runId: string, workflowId: string, input: Work
   const edges = workflow.edges as unknown as FlowEdge[]
 
   if (nodes.length === 0) {
-    await prisma.workflowRun.update({ where: { id: runId }, data: { status: 'failed', finishedAt: new Date() } })
+    const error = 'Workflow has no configured agent nodes. Add agents from the UI first.'
+    await prisma.workflowRun.update({ where: { id: runId }, data: { status: 'failed', finishedAt: new Date(), error } })
     logEmitter.status(runId, 'failed')
-    throw new Error('Workflow has no configured agent nodes. Add agents from the UI first.')
+    throw new Error(error)
   }
 
   const sortedNodes = topoSort(nodes, edges)
@@ -244,9 +245,10 @@ export async function runWorkflow(runId: string, workflowId: string, input: Work
       }
     }
   } catch (err) {
+    const error = err instanceof Error ? err.message : String(err)
     await prisma.workflowRun.update({
       where: { id: runId },
-      data: { status: 'failed', finishedAt: new Date() },
+      data: { status: 'failed', finishedAt: new Date(), error },
     })
     logEmitter.status(runId, 'failed')
     throw err
