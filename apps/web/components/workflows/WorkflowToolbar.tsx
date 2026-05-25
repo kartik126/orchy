@@ -31,7 +31,7 @@ export default function WorkflowToolbar({ agents, saving, running, channel, onAd
         <button className="border border-slate-200 text-slate-700 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-slate-50 flex items-center gap-1">
           + Add Agent ▾
         </button>
-        <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10 min-w-[180px] hidden group-hover:block max-h-64 overflow-y-auto">
+        <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-20 min-w-[180px] hidden group-hover:block max-h-64 overflow-y-auto">
           {agents.length === 0 ? (
             <p className="px-3 py-2 text-xs text-slate-400">No agents. Create one first.</p>
           ) : (
